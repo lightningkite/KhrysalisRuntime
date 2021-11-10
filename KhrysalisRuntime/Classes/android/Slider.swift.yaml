@@ -1,0 +1,51 @@
+---
+- id: android.widget.SeekBar.max
+  type: get
+  reflectiveName: "\\.maximumValue"
+  template: Int(~this~.maximumValue)
+
+- id: android.widget.SeekBar.max
+  type: set
+  reflectiveName: "\\.maximumValue"
+  template: ~this~.maximumValue = Float(~0~)
+
+- id: android.widget.SeekBar.min
+  type: get
+  reflectiveName: "\\.minimumValue"
+  template: Int(~this~.minimumValue)
+
+- id: android.widget.SeekBar.min
+  type: set
+  reflectiveName: "\\.minimumValue"
+  template: ~this~.minimumValue = Float(~0~)
+
+- id: android.widget.RatingBar.numStars
+  type: get
+  reflectiveName: "\\.settings.totalStars"
+  template: ~this~.settings.totalStars
+
+- id: android.widget.RatingBar.numStars
+  type: set
+  reflectiveName: "\\.settings.totalStars"
+  template: ~this~.settings.totalStars = ~0~
+
+
+- id: android.widget.RatingBar.rating
+  type: get
+  reflectiveName: "\\.rating"
+  template: Float(~this~.rating)
+
+- id: android.widget.RatingBar.rating
+  type: set
+  reflectiveName: "\\.rating"
+  template: ~this~.rating = Double(~0~)
+
+- id: android.widget.RatingBar.stepSize
+  type: get
+  reflectiveName: "\\.fillMode"
+  template: ""
+
+- id: android.widget.RatingBar.stepSize
+  type: set
+  reflectiveName: "\\.fillMode"
+  template: ""

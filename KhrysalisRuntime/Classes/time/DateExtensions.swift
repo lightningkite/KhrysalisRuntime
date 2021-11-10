@@ -2,6 +2,9 @@
 //  DateExtensions.swift
 //  KhrysalisRuntime
 //
+//  This uses DateComponents to recreate Java 8 time, to some extent at least.
+//  Priority was given to making this feel "Swift-y" as opposed to matching Java exactly.
+//
 //  Created by Joseph Ivie on 11/6/21.
 //
 
@@ -10,9 +13,13 @@ import Foundation
 private let eraBasis = DateComponents(era: 1, year: 1970, month: 1, day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0)
 
 public protocol HasDateComponents: Comparable {
+    init(from: Date)
     var dateComponents: DateComponents { get set }
 }
 extension DateComponents: HasDateComponents {
+    public init(from: Date) {
+        self = Calendar.current.dateComponents([.calendar, .era, .year, .month, .day, .hour, .minute, .second, .nanosecond], from: from)
+    }
     public var dateComponents: DateComponents { get { self } set { self = newValue }}
 }
 public extension HasDateComponents {
@@ -48,6 +55,10 @@ private extension HasDateComponents {
 }
 
 public struct LocalDate: HasDateComponents {
+    public init(from: Date) {
+        self.init(calendar: Calendar.current, from: from)
+    }
+    
     public var dateComponents: DateComponents
     public var calendar: Calendar { get { dateComponents.calendar! } set { dateComponents.calendar = newValue } }
     public var era: Int { get { dateComponents.era! } set { dateComponents.era = newValue } }
@@ -56,7 +67,7 @@ public struct LocalDate: HasDateComponents {
     public var day: Int { get { dateComponents.day! } set { dateComponents.day = newValue } }
     public var epochDay: Int { get { Calendar.current.dateComponents([.day], from: Calendar.current.date(from: eraBasis)!, to: Calendar.current.date(from: self.dateComponents)!).day! } }
     public init(
-        calendar: Calendar = Calendar.current,
+        calendar: Calendar,
         from: Date = Date()
     ) {
         dateComponents = calendar.dateComponents([.era, .year, .month, .day], from: from)
@@ -107,6 +118,9 @@ public struct LocalDate: HasDateComponents {
     
 }
 public struct LocalTime: HasDateComponents {
+    public init(from: Date) {
+        self.init(calendar: Calendar.current, from: from)
+    }
     public var dateComponents: DateComponents
     public var calendar: Calendar { get { dateComponents.calendar! } set { dateComponents.calendar = newValue } }
     public var hour: Int { get { dateComponents.hour! } set { dateComponents.hour = newValue } }
@@ -114,7 +128,7 @@ public struct LocalTime: HasDateComponents {
     public var second: Int { get { dateComponents.second! } set { dateComponents.second = newValue } }
     public var nanosecond: Int { get { dateComponents.nanosecond! } set { dateComponents.nanosecond = newValue } }
     public init(
-        calendar: Calendar = Calendar.current,
+        calendar: Calendar,
         from: Date = Date()
     ) {
         dateComponents = calendar.dateComponents([.hour, .minute, .second, .nanosecond], from: from)
@@ -163,6 +177,9 @@ public struct LocalTime: HasDateComponents {
     public static let MAX = LocalTime(hour: 23, minute: 59, second: 59, nanosecond: 999_999_999)
 }
 public struct LocalDateTime: HasDateComponents {
+    public init(from: Date) {
+        self.init(calendar: Calendar.current, from: from)
+    }
     public var dateComponents: DateComponents
     public var calendar: Calendar { get { dateComponents.calendar! } set { dateComponents.calendar = newValue } }
     public var era: Int { get { dateComponents.era! } set { dateComponents.era = newValue } }
@@ -174,7 +191,7 @@ public struct LocalDateTime: HasDateComponents {
     public var second: Int { get { dateComponents.second! } set { dateComponents.second = newValue } }
     public var nanosecond: Int { get { dateComponents.nanosecond! } set { dateComponents.nanosecond = newValue } }
     public init(
-        calendar: Calendar = Calendar.current,
+        calendar: Calendar,
         from: Date = Date()
     ) {
         dateComponents = calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond], from: from)
@@ -225,6 +242,28 @@ public struct LocalDateTime: HasDateComponents {
             nanosecond: nanosecond ?? self.nanosecond
         )
     }
+    public func with(
+        localDate: LocalDate
+    ) -> Self {
+        with(
+            calendar: localDate.calendar,
+            era: localDate.era,
+            year: localDate.year,
+            month: localDate.month,
+            day: localDate.day
+        )
+    }
+    public func with(
+        localTime: LocalTime
+    ) -> Self {
+        with(
+            calendar: localTime.calendar,
+            hour: localTime.hour,
+            minute: localTime.minute,
+            second: localTime.second,
+            nanosecond: localTime.nanosecond
+        )
+    }
     public func plus(
         era: Int = 0,
         year: Int = 0,
@@ -249,6 +288,9 @@ public struct LocalDateTime: HasDateComponents {
     }
 }
 public struct ZonedDateTime: HasDateComponents {
+    public init(from: Date) {
+        self.init(calendar: Calendar.current, from: from)
+    }
     public var dateComponents: DateComponents
     public var calendar: Calendar { get { dateComponents.calendar! } set { dateComponents.calendar = newValue } }
     public var timeZone: TimeZone { get { dateComponents.timeZone! } set { dateComponents.timeZone = newValue } }
@@ -261,7 +303,7 @@ public struct ZonedDateTime: HasDateComponents {
     public var second: Int { get { dateComponents.second! } set { dateComponents.second = newValue } }
     public var nanosecond: Int { get { dateComponents.nanosecond! } set { dateComponents.nanosecond = newValue } }
     public init(
-        calendar: Calendar = Calendar.current,
+        calendar: Calendar,
         timeZone: TimeZone? = nil,
         from: Date = Date()
     ) {
@@ -332,6 +374,55 @@ public struct ZonedDateTime: HasDateComponents {
             nanosecond: nanosecond ?? self.nanosecond
         )
     }
+    public func with(
+        localDate: LocalDate
+    ) -> Self {
+        with(
+            era: localDate.era,
+            year: localDate.year,
+            month: localDate.month,
+            day: localDate.day
+        )
+    }
+    public func with(
+        localTime: LocalTime
+    ) -> Self {
+        with(
+            hour: localTime.hour,
+            minute: localTime.minute,
+            second: localTime.second,
+            nanosecond: localTime.nanosecond
+        )
+    }
+    public func with(
+        localDate: LocalDate,
+        localTime: LocalTime
+    ) -> Self {
+        with(
+            era: localDate.era,
+            year: localDate.year,
+            month: localDate.month,
+            day: localDate.day,
+            hour: localTime.hour,
+            minute: localTime.minute,
+            second: localTime.second,
+            nanosecond: localTime.nanosecond
+        )
+    }
+    public func with(
+        localDateTime: LocalDateTime
+    ) -> Self {
+        with(
+            era: localDateTime.era,
+            year: localDateTime.year,
+            month: localDateTime.month,
+            day: localDateTime.day,
+            hour: localDateTime.hour,
+            minute: localDateTime.minute,
+            second: localDateTime.second,
+            nanosecond: localDateTime.nanosecond
+        )
+    }
     public func plus(
         era: Int = 0,
         year: Int = 0,
@@ -359,7 +450,7 @@ public struct ZonedDateTime: HasDateComponents {
 
 public extension Date {
     func atZone(_ timeZone: TimeZone = TimeZone.current) -> ZonedDateTime {
-        return ZonedDateTime(timeZone: timeZone, from: self)
+        return ZonedDateTime(calendar: Calendar.current, timeZone: timeZone, from: self)
     }
 }
 

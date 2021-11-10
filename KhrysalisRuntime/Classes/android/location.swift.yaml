@@ -1,0 +1,5 @@
+- id: android.location.Location
+  type: type
+  template:
+    pattern: CLLocation
+    imports: [CoreLocation]

@@ -1,0 +1,41 @@
+---
+- id: android.widget.TextView.setTextColor
+  type: call
+  reflectiveName: "\\.textColor"
+  template: ~this~.textColor = ~0~
+
+- id: android.widget.TextView.setTextColor
+  type: call
+  actualReceiver: android.widget.Button
+  reflectiveName: "UIButton.setTitleColor"
+  template: '~this~.setTitleColor(~0~, for: .normal)'
+
+- id: android.widget.TextView.setText
+  type: call
+  reflectiveName: "\\.text"
+  template: '~this~.text = ~0~'
+#
+#- id: android.widget.TextView.text
+#  type: get
+#  reflectiveName: "\\.text"
+#  template: '~this~.text'
+#
+#- id: android.widget.TextView.text
+#  type: set
+#  reflectiveName: "\\.text"
+#  template: '~this~.text = ~value~'
+
+- id: android.widget.Button.setText
+  type: call
+  reflectiveName: "UIButton.setTitle"
+  template: '~this~.setTitle(~value~, for: .normal)'
+
+- id: android.widget.Button.text
+  type: get
+  reflectiveName: "UIButton.setTitle"
+  template: '~this~.title(for: .normal)'
+
+- id: android.widget.Button.text
+  type: set
+  reflectiveName: "UIButton.setTitle"
+  template: '~this~.setTitle(~value~, for: .normal)'
