@@ -54,18 +54,36 @@ private extension HasDateComponents {
     }
 }
 
-public struct LocalDate: HasDateComponents {
-    public init(from: Date) {
+public struct LocalDate: HasDateComponents, Codable, Hashable {
+    public init(from: Date = Date()) {
         self.init(calendar: Calendar.current, from: from)
     }
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let str = try container.decode(String.self)
+        let parts = str.split(separator: "-")
+        guard let year = Int(parts[0]) else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Year missing")) }
+        guard let month = Int(parts[1]) else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Month missing")) }
+        guard let day = Int(parts[2]) else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Day missing")) }
+        self = LocalDate(year: year, month: month, day: day)
+    }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(String(format: "%04d-%02d-%02d", year, month, day))
+    }
     
+    static public let MIN = LocalDate(calendar: Calendar.current, era: 1, year: 0, month: 1, day: 1)
+    static public let MAX = LocalDate(calendar: Calendar.current, era: 1, year: 9999, month: 12, day: 31)
     public var dateComponents: DateComponents
     public var calendar: Calendar { get { dateComponents.calendar! } set { dateComponents.calendar = newValue } }
     public var era: Int { get { dateComponents.era! } set { dateComponents.era = newValue } }
     public var year: Int { get { dateComponents.year! } set { dateComponents.year = newValue } }
     public var month: Int { get { dateComponents.month! } set { dateComponents.month = newValue } }
     public var day: Int { get { dateComponents.day! } set { dateComponents.day = newValue } }
-    public var epochDay: Int { get { Calendar.current.dateComponents([.day], from: Calendar.current.date(from: eraBasis)!, to: Calendar.current.date(from: self.dateComponents)!).day! } }
+    public var epochDay: Int { get { Int(Calendar.current.dateComponents([.day], from: Calendar.current.date(from: eraBasis)!, to: Calendar.current.date(from: self.dateComponents)!).day!) } }
+    // Sunday - 1 -> 7
+    // Monday - 2 -> 1
+    public var dayOfWeek: Int { get { (calendar.dateComponents([.weekday], from: calendar.date(from: self.dateComponents)!).weekday! + 5) % 7 + 1 } }
     public init(
         calendar: Calendar,
         from: Date = Date()
@@ -83,7 +101,13 @@ public struct LocalDate: HasDateComponents {
         dateComponents = DateComponents(calendar: calendar, era: era, year: year, month: month, day: day)
     }
     public init(calendar: Calendar = Calendar.current, epochDay: Int) {
-        dateComponents = DateComponents(calendar: calendar, year: 1970, month: 1, day: epochDay + 1)
+        dateComponents = DateComponents(calendar: calendar, year: 1970, month: 1, day: Int(epochDay) + 1)
+    }
+    public func with(
+        dayOfWeek: Int
+    ) -> Self {
+        let newDate = calendar.date(bySetting: .weekday, value: (dayOfWeek) % 7 + 1, of: calendar.date(from: self.dateComponents)!)!
+        return Self(from: newDate)
     }
     public func with(
         calendar: Calendar? = nil,
@@ -116,9 +140,41 @@ public struct LocalDate: HasDateComponents {
         )
     }
     
+    public func hash(into hasher: inout Hasher){
+        hasher.combine(day)
+        hasher.combine(month)
+        hasher.combine(year)
+        hasher.combine(era)
+        hasher.combine(calendar)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        return lhs.day == rhs.day &&
+            lhs.month == rhs.month &&
+            lhs.year == rhs.year &&
+            lhs.era == rhs.era &&
+            lhs.calendar == rhs.calendar
+    }
+    
+    public func truncatedToMonth() -> Self { Self(calendar: calendar, era: era, year: year, month: month, day: 1) }
+    public func truncatedToYear() -> Self { Self(calendar: calendar, era: era, year: year, month: 1, day: 1) }
 }
-public struct LocalTime: HasDateComponents {
-    public init(from: Date) {
+public struct LocalTime: HasDateComponents, Codable, Hashable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let temp = try container.decode(String.self)
+        let str = temp[0] == "T" ? String(temp.dropFirst(1)) : temp
+        let parts = str.split(separator: ":")
+        guard let hour = Int(parts[0]) else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Hour missing")) }
+        guard let minute = Int(parts[1]) else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Month missing")) }
+        guard let second = parts.count >= 2 ? Double(parts[2]) : 0 else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Dat missing")) }
+        self = LocalTime(hour:hour, minute:minute, second:Int(second))
+    }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(String(format: "%04d:%02d:%02d", hour, minute, second))
+    }
+    public init(from: Date = Date()) {
         self.init(calendar: Calendar.current, from: from)
     }
     public var dateComponents: DateComponents
@@ -127,6 +183,19 @@ public struct LocalTime: HasDateComponents {
     public var minute: Int { get { dateComponents.minute! } set { dateComponents.minute = newValue } }
     public var second: Int { get { dateComponents.second! } set { dateComponents.second = newValue } }
     public var nanosecond: Int { get { dateComponents.nanosecond! } set { dateComponents.nanosecond = newValue } }
+    public var secondOfDay: Int {
+        return ((hour * 60 + minute) * 60 + second)
+    }
+    public init(calendar: Calendar = Calendar.current, secondOfDay: Int) {
+        self.dateComponents = DateComponents(
+            calendar: calendar,
+            hour: secondOfDay / 3600,
+            minute: (secondOfDay / 60) % 60,
+            second: secondOfDay % 60,
+            nanosecond: 0
+        )
+    }
+    
     public init(
         calendar: Calendar,
         from: Date = Date()
@@ -172,12 +241,60 @@ public struct LocalTime: HasDateComponents {
             nanosecond: self.nanosecond + nanosecond
         )
     }
+    public static func +(lhs: LocalTime, rhs: TimeInterval) -> LocalTime {
+        return lhs.plus(second: Int(rhs), nanosecond: Int(rhs * 1e9) % 1_000_000_000)
+    }
+    public static func -(lhs: LocalTime, rhs: TimeInterval) -> LocalTime {
+        return lhs.plus(second: -Int(rhs), nanosecond: -(Int(rhs * 1e9) % 1_000_000_000))
+    }
     
     public static let MIN = LocalTime(hour: 0, minute: 0, second: 0, nanosecond: 0)
     public static let MAX = LocalTime(hour: 23, minute: 59, second: 59, nanosecond: 999_999_999)
+    
+
+    public func hash(into hasher: inout Hasher){
+        hasher.combine(nanosecond)
+        hasher.combine(second)
+        hasher.combine(minute)
+        hasher.combine(hour)
+        hasher.combine(calendar)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        return lhs.nanosecond == rhs.nanosecond &&
+            lhs.second == rhs.second &&
+            lhs.minute == rhs.minute &&
+            lhs.hour == rhs.hour &&
+            lhs.calendar == rhs.calendar
+    }
+    
+    public func truncatedToHour() -> Self { Self(calendar: calendar, hour: hour, minute: 0, second: 0, nanosecond: 0) }
+    public func truncatedToMinute() -> Self { Self(calendar: calendar, hour: hour, minute: minute, second: 0, nanosecond: 0) }
 }
-public struct LocalDateTime: HasDateComponents {
-    public init(from: Date) {
+public struct LocalDateTime: HasDateComponents, Codable, Hashable {
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let str = try container.decode(String.self)
+        let majorParts = str.split(separator: "T")
+        let date = majorParts[0]
+        let time =  majorParts[1]
+        let timeParts = time.split(separator: ":")
+        let dateParts = date.split(separator: "-")
+        guard let year = Int(dateParts[0]) else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Year missing")) }
+        guard let month = Int(dateParts[1]) else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Month missing")) }
+        guard let day = Int(dateParts[2]) else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Day missing")) }
+        guard let hour = Int(timeParts[0]) else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Hour missing")) }
+        guard let minute = Int(timeParts[1]) else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Month missing")) }
+        guard let second = timeParts.count >= 2 ? Double(timeParts[2]) : 0 else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Dat missing")) }
+        self = LocalDateTime(year:year, month:month, day:day, hour:hour, minute:minute, second:Int(second))
+    }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(String(format: "%04d-%02d-%02dT%04d:%02d:%02d", year, month, day, hour, minute, second))
+    }
+    
+    public init(from: Date = Date()) {
         self.init(calendar: Calendar.current, from: from)
     }
     public var dateComponents: DateComponents
@@ -190,6 +307,7 @@ public struct LocalDateTime: HasDateComponents {
     public var minute: Int { get { dateComponents.minute! } set { dateComponents.minute = newValue } }
     public var second: Int { get { dateComponents.second! } set { dateComponents.second = newValue } }
     public var nanosecond: Int { get { dateComponents.nanosecond! } set { dateComponents.nanosecond = newValue } }
+    public var dayOfWeek: Int { get { calendar.dateComponents([.weekday], from: calendar.date(from: self.dateComponents)!).weekday! } }
     public init(
         calendar: Calendar,
         from: Date = Date()
@@ -243,7 +361,7 @@ public struct LocalDateTime: HasDateComponents {
         )
     }
     public func with(
-        localDate: LocalDate
+        _ localDate: LocalDate
     ) -> Self {
         with(
             calendar: localDate.calendar,
@@ -254,7 +372,7 @@ public struct LocalDateTime: HasDateComponents {
         )
     }
     public func with(
-        localTime: LocalTime
+        _ localTime: LocalTime
     ) -> Self {
         with(
             calendar: localTime.calendar,
@@ -286,9 +404,86 @@ public struct LocalDateTime: HasDateComponents {
             nanosecond: self.nanosecond + nanosecond
         )
     }
+    
+
+    public func hash(into hasher: inout Hasher){
+        hasher.combine(day)
+        hasher.combine(month)
+        hasher.combine(year)
+        hasher.combine(era)
+        hasher.combine(second)
+        hasher.combine(minute)
+        hasher.combine(hour)
+        hasher.combine(calendar)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        return lhs.calendar == rhs.calendar &&
+            lhs.day == rhs.day &&
+            lhs.month == rhs.month &&
+            lhs.year == rhs.year &&
+            lhs.era == rhs.era &&
+            lhs.second == rhs.second &&
+            lhs.minute == rhs.minute &&
+            lhs.hour == rhs.hour &&
+            lhs.day == rhs.day
+    }
+    
+    public func truncatedToYear() -> Self { with(month: 1, day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0) }
+    public func truncatedToMonth() -> Self { with(day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0) }
+    public func truncatedToDay() -> Self { with(hour: 0, minute: 0, second: 0, nanosecond: 0) }
+    public func truncatedToHour() -> Self { with(minute: 0, second: 0, nanosecond: 0) }
+    public func truncatedToMinute() -> Self { with(second: 0, nanosecond: 0) }
+    
+    static public let MIN = LocalDateTime(localDate: LocalDate.MIN, localTime: LocalTime.MIN)
+    static public let MAX = LocalDateTime(localDate: LocalDate.MAX, localTime: LocalTime.MAX)
 }
-public struct ZonedDateTime: HasDateComponents {
-    public init(from: Date) {
+public struct ZonedDateTime: HasDateComponents, Codable, Hashable {
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let str = try container.decode(String.self)
+        let majorParts = str.split(separator: "T")
+        let date = majorParts[0]
+        var time = String(majorParts[1])
+        var timeZone: TimeZone? = nil
+        if(time.contains("+")){
+            let index = time.indexOf(string: "+")
+            timeZone = TimeZone.init(iso8601:time.substring(index))
+            time = time.substring(startIndex: 0, endIndex:index)
+        } else if (time.contains("-")){
+            let index = time.indexOf(string: "-")
+            timeZone = TimeZone.init(iso8601:time.substring(index))
+            time = time.substring(startIndex: 0, endIndex:index)
+        } else if(time.contains("Z")){
+            timeZone = TimeZone.init(iso8601: "Z")
+            time = time.substring(startIndex: 0, endIndex:time.count - 1)
+        }
+        let dateParts = date.split(separator: "-")
+        let timeParts = time.split(separator: ":")
+        guard let year = Int(dateParts[0]) else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Year missing")) }
+        guard let month = Int(dateParts[1]) else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Month missing")) }
+        guard let day = Int(dateParts[2]) else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Day missing")) }
+        guard let hour = Int(timeParts[0]) else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Hour missing")) }
+        guard let minute = Int(timeParts[1]) else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Month missing")) }
+        guard let second = timeParts.count >= 2 ? Double(timeParts[2]) : 0 else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Dat missing")) }
+        self = ZonedDateTime(timeZone:timeZone ?? TimeZone.current, year:year, month:month, day:day, hour:hour, minute:minute, second:Int(second))
+    }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        let seconds = timeZone.secondsFromGMT()
+        let hoursOffset = seconds / 3600
+        let minuteOffset = abs(seconds / 60) % 60
+        var output = "Z"
+        if(seconds > 0){
+            output = String(format: "+%02d:%02d", hoursOffset, minuteOffset)
+        } else if(seconds < 0){
+            output = String(format: "-%02d:%02d", hoursOffset, minuteOffset)
+        }
+        try container.encode(String(format: "%04d-%02d-%02dT%04d:%02d:%02d%s", year, month, day, hour, minute, second, output))
+    }
+    
+    public init(from: Date = Date()) {
         self.init(calendar: Calendar.current, from: from)
     }
     public var dateComponents: DateComponents
@@ -302,6 +497,7 @@ public struct ZonedDateTime: HasDateComponents {
     public var minute: Int { get { dateComponents.minute! } set { dateComponents.minute = newValue } }
     public var second: Int { get { dateComponents.second! } set { dateComponents.second = newValue } }
     public var nanosecond: Int { get { dateComponents.nanosecond! } set { dateComponents.nanosecond = newValue } }
+    public var dayOfWeek: Int { get { calendar.dateComponents([.weekday], from: calendar.date(from: self.dateComponents)!).weekday! } }
     public init(
         calendar: Calendar,
         timeZone: TimeZone? = nil,
@@ -375,7 +571,7 @@ public struct ZonedDateTime: HasDateComponents {
         )
     }
     public func with(
-        localDate: LocalDate
+        _ localDate: LocalDate
     ) -> Self {
         with(
             era: localDate.era,
@@ -385,7 +581,7 @@ public struct ZonedDateTime: HasDateComponents {
         )
     }
     public func with(
-        localTime: LocalTime
+        _ localTime: LocalTime
     ) -> Self {
         with(
             hour: localTime.hour,
@@ -395,8 +591,8 @@ public struct ZonedDateTime: HasDateComponents {
         )
     }
     public func with(
-        localDate: LocalDate,
-        localTime: LocalTime
+        _ localDate: LocalDate,
+        _ localTime: LocalTime
     ) -> Self {
         with(
             era: localDate.era,
@@ -410,7 +606,7 @@ public struct ZonedDateTime: HasDateComponents {
         )
     }
     public func with(
-        localDateTime: LocalDateTime
+        _ localDateTime: LocalDateTime
     ) -> Self {
         with(
             era: localDateTime.era,
@@ -446,12 +642,47 @@ public struct ZonedDateTime: HasDateComponents {
             nanosecond: self.nanosecond + nanosecond
         )
     }
+    
+    public func hash(into hasher: inout Hasher){
+        hasher.combine(day)
+        hasher.combine(month)
+        hasher.combine(year)
+        hasher.combine(era)
+        hasher.combine(second)
+        hasher.combine(minute)
+        hasher.combine(hour)
+        hasher.combine(calendar)
+        hasher.combine(timeZone)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        return lhs.calendar == rhs.calendar &&
+            lhs.day == rhs.day &&
+            lhs.month == rhs.month &&
+            lhs.year == rhs.year &&
+            lhs.era == rhs.era &&
+            lhs.second == rhs.second &&
+            lhs.minute == rhs.minute &&
+            lhs.hour == rhs.hour &&
+            lhs.day == rhs.day &&
+            lhs.timeZone == rhs.timeZone
+    }
+    
+    public func truncatedToYear() -> Self { with(month: 1, day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0) }
+    public func truncatedToMonth() -> Self { with(day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0) }
+    public func truncatedToDay() -> Self { with(hour: 0, minute: 0, second: 0, nanosecond: 0) }
+    public func truncatedToHour() -> Self { with(minute: 0, second: 0, nanosecond: 0) }
+    public func truncatedToMinute() -> Self { with(second: 0, nanosecond: 0) }
+    
+    static public let MIN = ZonedDateTime(localDate: LocalDate.MIN, localTime: LocalTime.MIN)
+    static public let MAX = ZonedDateTime(localDate: LocalDate.MAX, localTime: LocalTime.MAX)
 }
 
 public extension Date {
     func atZone(_ timeZone: TimeZone = TimeZone.current) -> ZonedDateTime {
         return ZonedDateTime(calendar: Calendar.current, timeZone: timeZone, from: self)
     }
+    
 }
 
 public extension DateFormatter {
@@ -460,5 +691,36 @@ public extension DateFormatter {
         self.dateStyle = dateStyle
         self.timeStyle = timeStyle
         self.locale = Locale.current
+    }
+}
+
+
+extension TimeZone{
+    init?(iso8601:String){
+        guard iso8601.count > 0 else { return nil }
+        
+        if(iso8601 == "Z"){
+            self.init(secondsFromGMT: 0)
+            return
+        }
+        
+        let sign =  iso8601[0]
+        guard sign == "-" || sign == "+" else { return nil }
+        var direction = 1
+        if (sign == "-") { direction = -1 }
+        
+        let timePart = iso8601.substring(1)
+        if(timePart.count == 4){
+            guard let hours = Int(timePart.substring(0, 2)) else {return nil}
+            guard let minutes = Int(timePart.substring(2, 5)) else {return nil}
+            self.init(secondsFromGMT: direction * (hours * 3600 + minutes * 60))
+            return
+        }else{
+            let parts = timePart.split(separator:":")
+            guard let hours = Int(parts[0]) else { return nil }
+            let minutes = Int(parts.getOrNull(index: 1) ?? "0") ?? 0
+            self.init(secondsFromGMT: direction * (hours * 3600 + minutes * 60))
+            return
+        }
     }
 }

@@ -200,3 +200,23 @@
   template:
     pattern: UICollectionView
     imports: [UIKit]
+
+- id: android.view.View.requestFocus
+  type: call
+  template: ~this~.becomeFirstResponder()
+
+- id: android.view.View
+  type: call
+  template: 'UIView(frame: .zero)'
+
+- id: android.view.View.background
+  type: set
+  template: '~this~.backgroundLayer = nil'
+
+- id: android.view.View.rotation
+  type: set
+  template: '~this~.transform = CGAffineTransform(rotationAngle: ~value~ * CGFloat.pi / 180)'
+
+- id: android.view.View.setBackgroundColor
+  type: call
+  template: '~this~.backgroundColor = ~0~'

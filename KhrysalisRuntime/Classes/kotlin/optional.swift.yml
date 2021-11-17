@@ -9,12 +9,15 @@
   type: call
   hasExplicitTypeArguments: true
   template: "Optional<~T0~>.none"
+- id: java.util.Optional.isPresent
+  type: get
+  template: "(~this~ != nil)"
 - id: java.util.Optional.ofNullable
   type: call
   template: "~0~"
 - id: java.util.Optional.get
   type: call
-  template: "~0~!"
+  template: "~this~!"
 - id: com.lightningkite.rx.kotlin
   type: get
   template: "~this~"

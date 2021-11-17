@@ -1,14 +1,20 @@
 ---
 
-- id: com.lightningkite.butterfly.Box
+- id: java.util.Optional
   type: type
   template: ~T0~
-- id: com.lightningkite.butterfly.Box.value
-  type: get
-  template: ~this~
-- id: com.lightningkite.butterfly.Box.Companion.wrap
+- id: java.util.Optional.get
   type: call
-  template: ~0~
-- id: com.lightningkite.butterfly.boxWrap
+  template: ~this~!
+- id: java.util.Optional.orElse
   type: call
-  template: ~0~
+  template: '~this~ ?: ~0~'
+- id: java.util.Optional.of
+  type: call
+  template: '~this~'
+- id: java.util.Optional.ofNullable
+  type: call
+  template: '~this~'
+- id: java.util.Optional.empty
+  type: call
+  template: 'nil'

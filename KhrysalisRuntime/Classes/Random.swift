@@ -10,7 +10,7 @@ public class Random {
         public static let INSTANCE = Default()
     }
 
-    public init(seed: Int64) {
+    public init(seed: Int) {
         twister = MersenneTwister(seed: UInt64(seed))
     }
     
@@ -36,21 +36,21 @@ public class Random {
         return nextInt(from, until)
     }
 
-    public func nextLong() -> Int64 {
-        return Int64.random(in: Int64.min...Int64.max, using: &twister)
+    public func nextLong() -> Int {
+        return Int.random(in: Int.min...Int.max, using: &twister)
     }
 
-    public func nextLong(_ until: Int64) -> Int64 {
-        return Int64.random(in: 0...until, using: &twister)
+    public func nextLong(_ until: Int) -> Int {
+        return Int.random(in: 0...until, using: &twister)
     }
-    public func nextLong(until: Int64) -> Int64 {
+    public func nextLong(until: Int) -> Int {
         return nextLong(until)
     }
 
-    public func nextLong(_ from: Int64, _ until: Int64) -> Int64 {
-        return Int64.random(in: from...until, using: &twister)
+    public func nextLong(_ from: Int, _ until: Int) -> Int {
+        return Int.random(in: from...until, using: &twister)
     }
-    public func nextLong(from: Int64, until: Int64) -> Int64 {
+    public func nextLong(from: Int, until: Int) -> Int {
         return nextLong(from, until)
     }
 

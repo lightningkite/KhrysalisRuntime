@@ -14,25 +14,12 @@
 
 - id: java.lang.Throwable.message
   type: get
-  template: ~this~.localizedDescription
+  template:
+    pattern: ~this~.localizedDescription.unlessEmpty()
+    imports: [KhrysalisRuntime]
 
 - id: kotlin.Throwable.message
   type: get
-  template: ~this~.localizedDescription
-
-- id: java.lang.Exception.message
-  type: get
-  template: ~this~.message
-
-- id: kotlin.Exception.message
-  type: get
-  template: ~this~.message
-
-- id: com.lightningkite.khrysalis.fatalError
-  type: call
-  arguments: [kotlin.String]
-  template: fatalError(~0~)
-
-- id: com.lightningkite.khrysalis.fatalError
-  type: call
-  template: fatalError()
+  template:
+    pattern: ~this~.localizedDescription.unlessEmpty()
+    imports: [KhrysalisRuntime]

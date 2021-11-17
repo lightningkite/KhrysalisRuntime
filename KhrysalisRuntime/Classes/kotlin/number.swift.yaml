@@ -12,7 +12,7 @@
   template: Int
 - id: kotlin.Long
   type: type
-  template: Int64
+  template: Int
 - id: kotlin.Float
   type: type
   template: Float
@@ -31,7 +31,7 @@
   template: Int
 - id: kotlin.Long
   type: typeRef
-  template: Int64
+  template: Int
 - id: kotlin.Float
   type: typeRef
   template: Float
@@ -807,22 +807,22 @@
 
 - id: kotlin.Byte.toLong
   type: call
-  template: Int64(~this~)
+  template: Int(~this~)
 - id: kotlin.Short.toLong
   type: call
-  template: Int64(~this~)
+  template: Int(~this~)
 - id: kotlin.Int.toLong
   type: call
-  template: Int64(~this~)
+  template: Int(~this~)
 - id: kotlin.Long.toLong
   type: call
-  template: Int64(~this~)
+  template: Int(~this~)
 - id: kotlin.Float.toLong
   type: call
-  template: Int64(~this~)
+  template: Int(~this~)
 - id: kotlin.Double.toLong
   type: call
-  template: Int64(~this~)
+  template: Int(~this~)
   
 # toFloat
 
@@ -903,11 +903,11 @@
 
 - id: kotlin.Long.Companion.MIN_VALUE
   type: get
-  template: Int64.min
+  template: Int.min
 
 - id: kotlin.Long.Companion.MAX_VALUE
   type: get
-  template: Int64.max
+  template: Int.max
 
 - id: kotlin.Float.Companion.MIN_VALUE
   type: get
