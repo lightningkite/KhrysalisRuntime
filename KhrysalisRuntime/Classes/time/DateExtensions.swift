@@ -12,6 +12,37 @@ import Foundation
 
 private let eraBasis = DateComponents(era: 1, year: 1970, month: 1, day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0)
 
+private extension DateComponents {
+    var existingComponents: Set<Calendar.Component> {
+        var components: Set<Calendar.Component> = []
+        if(calendar != nil) { components.insert(.calendar) }
+        if(timeZone != nil) { components.insert(.timeZone) }
+        if(era != nil) { components.insert(.era) }
+        if(year != nil) { components.insert(.year) }
+        if(month != nil) { components.insert(.month) }
+        if(day != nil) { components.insert(.day) }
+        if(hour != nil) { components.insert(.hour) }
+        if(minute != nil) { components.insert(.minute) }
+        if(second != nil) { components.insert(.second) }
+        if(nanosecond != nil) { components.insert(.nanosecond) }
+        return components
+    }
+    static func +(lhs: DateComponents, rhs: DateComponents) -> DateComponents {
+        return lhs.calendar!.dateComponents(byAdding: rhs, to: lhs)!
+    }
+}
+public protocol HasDateComponentsWithDay: HasDateComponents { }
+public extension HasDateComponentsWithDay {
+    var weekday: Int { get { dateComponents.weekday ?? dateComponents.calendar!.dateComponents([.weekday], from: dateComponents.calendar!.date(from: dateComponents)!).weekday! } }
+}
+private extension Calendar {
+    func dateComponents(byAdding: DateComponents, to: DateComponents) -> DateComponents? {
+        let originalDate = date(from: to)
+        let addedDate = originalDate.flatMap { date(byAdding: byAdding, to: $0) }
+        let components = addedDate.map { dateComponents(to.existingComponents, from: $0) }
+        return components
+    }
+}
 public protocol HasDateComponents: Comparable {
     init(from: Date)
     var dateComponents: DateComponents { get set }
@@ -54,7 +85,7 @@ private extension HasDateComponents {
     }
 }
 
-public struct LocalDate: HasDateComponents, Codable, Hashable {
+public struct LocalDate: HasDateComponentsWithDay, Codable, Hashable {
     public init(from: Date = Date()) {
         self.init(calendar: Calendar.current, from: from)
     }
@@ -81,9 +112,7 @@ public struct LocalDate: HasDateComponents, Codable, Hashable {
     public var month: Int { get { dateComponents.month! } set { dateComponents.month = newValue } }
     public var day: Int { get { dateComponents.day! } set { dateComponents.day = newValue } }
     public var epochDay: Int { get { Int(Calendar.current.dateComponents([.day], from: Calendar.current.date(from: eraBasis)!, to: Calendar.current.date(from: self.dateComponents)!).day!) } }
-    // Sunday - 1 -> 7
-    // Monday - 2 -> 1
-    public var dayOfWeek: Int { get { (calendar.dateComponents([.weekday], from: calendar.date(from: self.dateComponents)!).weekday! + 5) % 7 + 1 } }
+    
     public init(
         calendar: Calendar,
         from: Date = Date()
@@ -101,7 +130,7 @@ public struct LocalDate: HasDateComponents, Codable, Hashable {
         dateComponents = DateComponents(calendar: calendar, era: era, year: year, month: month, day: day)
     }
     public init(calendar: Calendar = Calendar.current, epochDay: Int) {
-        dateComponents = DateComponents(calendar: calendar, year: 1970, month: 1, day: Int(epochDay) + 1)
+        dateComponents = DateComponents(calendar: calendar, era: 1, year: 1970, month: 1, day: 1) + DateComponents(day: epochDay)
     }
     public func with(
         dayOfWeek: Int
@@ -124,21 +153,13 @@ public struct LocalDate: HasDateComponents, Codable, Hashable {
             day: day ?? self.day
         )
     }
-    public func plus(
-        calendar: Calendar? = nil,
-        era: Int = 0,
-        year: Int = 0,
-        month: Int = 0,
-        day: Int = 0
-    ) -> Self {
-        Self(
-            calendar: self.calendar,
-            era: self.era + era,
-            year: self.year + year,
-            month: self.month + month,
-            day: self.day + day
-        )
+    private init(_ components: DateComponents) {
+        self.dateComponents = components
     }
+    public func plus(era: Int) -> Self { Self(dateComponents + DateComponents(era: era)) }
+    public func plus(year: Int) -> Self { Self(dateComponents + DateComponents(year: year)) }
+    public func plus(month: Int) -> Self { Self(dateComponents + DateComponents(month: month)) }
+    public func plus(day: Int) -> Self { Self(dateComponents + DateComponents(day: day)) }
     
     public func hash(into hasher: inout Hasher){
         hasher.combine(day)
@@ -172,7 +193,7 @@ public struct LocalTime: HasDateComponents, Codable, Hashable {
     }
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
-        try container.encode(String(format: "%04d:%02d:%02d", hour, minute, second))
+        try container.encode(String(format: "%02d:%02d:%02d", hour, minute, second))
     }
     public init(from: Date = Date()) {
         self.init(calendar: Calendar.current, from: from)
@@ -227,25 +248,18 @@ public struct LocalTime: HasDateComponents, Codable, Hashable {
             nanosecond: nanosecond ?? self.nanosecond
         )
     }
-    public func plus(
-        hour: Int = 0,
-        minute: Int = 0,
-        second: Int = 0,
-        nanosecond: Int = 0
-    ) -> Self {
-        Self(
-            calendar: self.calendar,
-            hour: self.hour + hour,
-            minute: self.minute + minute,
-            second: self.second + second,
-            nanosecond: self.nanosecond + nanosecond
-        )
+    private init(_ components: DateComponents) {
+        self.dateComponents = components
     }
+    public func plus(hour: Int) -> Self { Self(dateComponents + DateComponents(hour: hour)) }
+    public func plus(minute: Int) -> Self { Self(dateComponents + DateComponents(minute: minute)) }
+    public func plus(second: Int) -> Self { Self(dateComponents + DateComponents(second: second)) }
+    public func plus(nanosecond: Int) -> Self { Self(dateComponents + DateComponents(nanosecond: nanosecond)) }
     public static func +(lhs: LocalTime, rhs: TimeInterval) -> LocalTime {
-        return lhs.plus(second: Int(rhs), nanosecond: Int(rhs * 1e9) % 1_000_000_000)
+        return lhs.plus(second: Int(rhs))
     }
     public static func -(lhs: LocalTime, rhs: TimeInterval) -> LocalTime {
-        return lhs.plus(second: -Int(rhs), nanosecond: -(Int(rhs * 1e9) % 1_000_000_000))
+        return lhs.plus(second: -Int(rhs))
     }
     
     public static let MIN = LocalTime(hour: 0, minute: 0, second: 0, nanosecond: 0)
@@ -271,7 +285,7 @@ public struct LocalTime: HasDateComponents, Codable, Hashable {
     public func truncatedToHour() -> Self { Self(calendar: calendar, hour: hour, minute: 0, second: 0, nanosecond: 0) }
     public func truncatedToMinute() -> Self { Self(calendar: calendar, hour: hour, minute: minute, second: 0, nanosecond: 0) }
 }
-public struct LocalDateTime: HasDateComponents, Codable, Hashable {
+public struct LocalDateTime: HasDateComponentsWithDay, Codable, Hashable {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -307,7 +321,6 @@ public struct LocalDateTime: HasDateComponents, Codable, Hashable {
     public var minute: Int { get { dateComponents.minute! } set { dateComponents.minute = newValue } }
     public var second: Int { get { dateComponents.second! } set { dateComponents.second = newValue } }
     public var nanosecond: Int { get { dateComponents.nanosecond! } set { dateComponents.nanosecond = newValue } }
-    public var dayOfWeek: Int { get { calendar.dateComponents([.weekday], from: calendar.date(from: self.dateComponents)!).weekday! } }
     public init(
         calendar: Calendar,
         from: Date = Date()
@@ -382,28 +395,17 @@ public struct LocalDateTime: HasDateComponents, Codable, Hashable {
             nanosecond: localTime.nanosecond
         )
     }
-    public func plus(
-        era: Int = 0,
-        year: Int = 0,
-        month: Int = 0,
-        day: Int = 0,
-        hour: Int = 0,
-        minute: Int = 0,
-        second: Int = 0,
-        nanosecond: Int = 0
-    ) -> Self {
-        Self(
-            calendar: self.calendar,
-            era: self.era + era,
-            year: self.year + year,
-            month: self.month + month,
-            day: self.day + day,
-            hour: self.hour + hour,
-            minute: self.minute + minute,
-            second: self.second + second,
-            nanosecond: self.nanosecond + nanosecond
-        )
+    private init(_ components: DateComponents) {
+        self.dateComponents = components
     }
+    public func plus(era: Int) -> Self { Self(dateComponents + DateComponents(era: era)) }
+    public func plus(year: Int) -> Self { Self(dateComponents + DateComponents(year: year)) }
+    public func plus(month: Int) -> Self { Self(dateComponents + DateComponents(month: month)) }
+    public func plus(day: Int) -> Self { Self(dateComponents + DateComponents(day: day)) }
+    public func plus(hour: Int) -> Self { Self(dateComponents + DateComponents(hour: hour)) }
+    public func plus(minute: Int) -> Self { Self(dateComponents + DateComponents(minute: minute)) }
+    public func plus(second: Int) -> Self { Self(dateComponents + DateComponents(second: second)) }
+    public func plus(nanosecond: Int) -> Self { Self(dateComponents + DateComponents(nanosecond: nanosecond)) }
     
 
     public func hash(into hasher: inout Hasher){
@@ -438,7 +440,7 @@ public struct LocalDateTime: HasDateComponents, Codable, Hashable {
     static public let MIN = LocalDateTime(localDate: LocalDate.MIN, localTime: LocalTime.MIN)
     static public let MAX = LocalDateTime(localDate: LocalDate.MAX, localTime: LocalTime.MAX)
 }
-public struct ZonedDateTime: HasDateComponents, Codable, Hashable {
+public struct ZonedDateTime: HasDateComponentsWithDay, Codable, Hashable {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -478,9 +480,9 @@ public struct ZonedDateTime: HasDateComponents, Codable, Hashable {
         if(seconds > 0){
             output = String(format: "+%02d:%02d", hoursOffset, minuteOffset)
         } else if(seconds < 0){
-            output = String(format: "-%02d:%02d", hoursOffset, minuteOffset)
+            output = String(format: "%02d:%02d", hoursOffset, minuteOffset)
         }
-        try container.encode(String(format: "%04d-%02d-%02dT%04d:%02d:%02d%s", year, month, day, hour, minute, second, output))
+        try container.encode(String(format: "%04d-%02d-%02dT%02d:%02d:%02d%@", year, month, day, hour, minute, second, output))
     }
     
     public init(from: Date = Date()) {
@@ -497,7 +499,6 @@ public struct ZonedDateTime: HasDateComponents, Codable, Hashable {
     public var minute: Int { get { dateComponents.minute! } set { dateComponents.minute = newValue } }
     public var second: Int { get { dateComponents.second! } set { dateComponents.second = newValue } }
     public var nanosecond: Int { get { dateComponents.nanosecond! } set { dateComponents.nanosecond = newValue } }
-    public var dayOfWeek: Int { get { calendar.dateComponents([.weekday], from: calendar.date(from: self.dateComponents)!).weekday! } }
     public init(
         calendar: Calendar,
         timeZone: TimeZone? = nil,
@@ -619,29 +620,17 @@ public struct ZonedDateTime: HasDateComponents, Codable, Hashable {
             nanosecond: localDateTime.nanosecond
         )
     }
-    public func plus(
-        era: Int = 0,
-        year: Int = 0,
-        month: Int = 0,
-        day: Int = 0,
-        hour: Int = 0,
-        minute: Int = 0,
-        second: Int = 0,
-        nanosecond: Int = 0
-    ) -> Self {
-        Self(
-            calendar: self.calendar,
-            timeZone: self.timeZone,
-            era: self.era + era,
-            year: self.year + year,
-            month: self.month + month,
-            day: self.day + day,
-            hour: self.hour + hour,
-            minute: self.minute + minute,
-            second: self.second + second,
-            nanosecond: self.nanosecond + nanosecond
-        )
+    private init(_ components: DateComponents) {
+        self.dateComponents = components
     }
+    public func plus(era: Int) -> Self { Self(dateComponents + DateComponents(era: era)) }
+    public func plus(year: Int) -> Self { Self(dateComponents + DateComponents(year: year)) }
+    public func plus(month: Int) -> Self { Self(dateComponents + DateComponents(month: month)) }
+    public func plus(day: Int) -> Self { Self(dateComponents + DateComponents(day: day)) }
+    public func plus(hour: Int) -> Self { Self(dateComponents + DateComponents(hour: hour)) }
+    public func plus(minute: Int) -> Self { Self(dateComponents + DateComponents(minute: minute)) }
+    public func plus(second: Int) -> Self { Self(dateComponents + DateComponents(second: second)) }
+    public func plus(nanosecond: Int) -> Self { Self(dateComponents + DateComponents(nanosecond: nanosecond)) }
     
     public func hash(into hasher: inout Hasher){
         hasher.combine(day)

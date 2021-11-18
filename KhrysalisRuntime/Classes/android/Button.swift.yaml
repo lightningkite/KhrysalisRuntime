@@ -13,22 +13,22 @@
 - type: get
   id: android.widget.ToggleButton.textOn
   reflectiveName: "UIButton.setTitle"
-  template: '~this~.title(for: .normal)'
+  template: '~this~.setTitle(~value~, for: .selected)'
 
 - type: set
   id: android.widget.ToggleButton.textOn
   reflectiveName: "UIButton.setTitle"
-  template: '~this~.setTitle(~value~, for: .normal)'
+  template: '~this~.setTitle(~value~, for: .selected)'
 
 - type: get
   id: android.widget.ToggleButton.textOff
   reflectiveName: "UIButton.setTitle"
-  template: ""  # We only want to do one of the two lest it look janked
+  template: '~this~.setTitle(~value~, for: .normal)'
 
 - type: set
   id: android.widget.ToggleButton.textOff
   reflectiveName: "UIButton.setTitle"
-  template: ""  # We only want to do one of the two lest it look janked
+  template: '~this~.setTitle(~value~, for: .normal)'
 
 - type: call
   id: android.view.View.performClick

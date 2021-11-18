@@ -180,7 +180,7 @@
 - id: com.google.android.material.tabs.TabLayout
   type: type
   template:
-    pattern: MaterialSegmentedControl
+    pattern: MaterialSegmentedControldRa
     imports: [KhrysalisRuntime]
 
 - id: androidx.recyclerview.widget.RecyclerView
@@ -220,3 +220,8 @@
 - id: android.view.View.setBackgroundColor
   type: call
   template: '~this~.backgroundColor = ~0~'
+
+- id: android.graphics.drawable.Drawable
+  type: type
+  isFunctionType: true
+  template: '()->CALayer'
