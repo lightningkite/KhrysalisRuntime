@@ -14,13 +14,8 @@ public extension CaseIterable {
     }
 }
 
-public extension StringEnum {
-    var name: String {
-        return "\(self)"
-    }
-}
-
 public protocol StringEnum {
+    var rawValue: String { get }
 }
 
 public class WeakReference<T: AnyObject> {
