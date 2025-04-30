@@ -1,6 +1,5 @@
 //Stub file made with Butterfly 2 (by Lightning Kite)
 import Foundation
-import UIKit
 
 
 public extension CGRect {
